@@ -112,7 +112,7 @@
                                         <rect key="frame" x="100" y="164" width="193" height="43"/>
                                         <color key="backgroundColor" systemColor="tintColor"/>
                                         <state key="normal" title="Button"/>
-                                        <buttonConfiguration key="configuration" style="filled" title="Search" cornerStyle="capsule">
+                                        <buttonConfiguration key="configuration" style="plain" title="Search" cornerStyle="capsule">
                                             <color key="baseForegroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                                         </buttonConfiguration>
                                         <connections>

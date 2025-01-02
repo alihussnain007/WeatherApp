@@ -36,5 +36,35 @@ class WeatherService {
           .receive(on: DispatchQueue.main)
           .eraseToAnyPublisher()
       }
+    
+    
+
+    
+    func fetchHourlyWeather(lat: Double, lon: Double) -> AnyPublisher<HourlyWeatherResponse, Error> {
+           let url = "\(baseURL)forecast"
+           let parameters: [String: Any] = [
+               "lat": lat,
+               "lon": lon,
+               "appid": apiKey,
+               "units": "metric"
+           ]
+           
+           return Future { promise in
+               AF.request(url, method: .get, parameters: parameters)
+                   .validate()
+                   .responseDecodable(of: HourlyWeatherResponse.self) { response in
+                       switch response.result {
+                       case .success(let weather):
+                           promise(.success(weather))
+                       case .failure(let error):
+                           promise(.failure(error))
+                       }
+                   }
+           }
+           .receive(on: DispatchQueue.main)
+           .eraseToAnyPublisher()
+       }
+    
+    
 }
 

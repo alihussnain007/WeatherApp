@@ -22,16 +22,32 @@ class MainViewController: UIViewController {
     private let activityIndicator = UIActivityIndicatorView(style: .large)
     let gradientLayer = CAGradientLayer()
     @IBOutlet weak var viewGradient: UIView!
+    private let collectionView: UICollectionView = {
+           let layout = UICollectionViewFlowLayout()
+           layout.scrollDirection = .horizontal
+           layout.itemSize = CGSize(width: 100, height: 150)
+           layout.minimumInteritemSpacing = 10
+           let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
+           cv.backgroundColor = .clear
+           cv.register(HourlyWeatherCell.self, forCellWithReuseIdentifier: "HourlyWeatherCell")
+           return cv
+       }()
     override func viewDidLoad() {
         super.viewDidLoad()
         applyGradient(to: viewGradient)
+        setupCollectionView()
         setupUI()
         bindViewModel()
        
     }
+
     
     @IBAction func searchButtonClick(_ sender: UIButton) {
-        viewModel.fetchWeatherByCity(city: textFieldCity.text ?? "Lahore") // Example city
+        guard let city = textFieldCity.text, !city.isEmpty else {
+            showErrorAlert(message: "Please enter a city name")
+            return
+        }
+        viewModel.fetchWeatherByCity(city: city, forceRefresh: true)
     }
     private func setupUI() {
            view.backgroundColor = .white
@@ -83,7 +99,16 @@ class MainViewController: UIViewController {
            maxTempLabel.text = "Max: \(weather.main.temp_max)°C"
            minTempLabel.text = "Min: \(weather.main.temp_min)°C"
            loadWeatherIcon(icon: weather.weather.first?.icon ?? "")
+           print("latitude:\(weather.coord.lat)")
+           print("Longitude:\(weather.coord.lon)")
+           viewModel.fetchHourlyWeather(lat: weather.coord.lat, lon: weather.coord.lon)
        }
+    
+    private func updateHourlyWeatherUI(with weather: HourlyWeatherResponse) {
+    
+        print("HourlyWeatherData:\(weather)")
+
+    }
 
        private func loadWeatherIcon(icon: String) {
            guard let url = URL(string: "https://openweathermap.org/img/wn/\(icon)@2x.png") else { return }
@@ -126,7 +151,40 @@ class MainViewController: UIViewController {
         super.viewDidLayoutSubviews()
         gradientLayer.frame = view.bounds
     }
+    private func setupCollectionView() {
+          view.addSubview(collectionView)
+          collectionView.translatesAutoresizingMaskIntoConstraints = false
+          NSLayoutConstraint.activate([
+              collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+              collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+              collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -20),
+              collectionView.heightAnchor.constraint(equalToConstant: 150)
+          ])
+          
+          collectionView.dataSource = self
+          collectionView.delegate = self
+          
+          // Bind to hourlyWeatherData
+          viewModel.$hourlyWeatherData
+              .sink { [weak self] items in
+                  self?.collectionView.reloadData()
+              }
+              .store(in: &cancellables)
+      }
 
   
 
+}
+
+extension MainViewController: UICollectionViewDataSource, UICollectionViewDelegate {
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        return viewModel.hourlyWeatherData.count
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "HourlyWeatherCell", for: indexPath) as! HourlyWeatherCell
+        let item = viewModel.hourlyWeatherData[indexPath.item]
+        cell.configure(with: item)
+        return cell
+    }
 }
